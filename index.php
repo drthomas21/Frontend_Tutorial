@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html ng-app="app">
 <head>
+    <base href="http://frontend.superwordpressguide.com/">
+
     <!-- Start jQuery v3 -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <!-- End jQuery v3 -->
@@ -8,6 +10,7 @@
     <!-- Start AngularJS -->
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular-sanitize.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular-route.js"></script>
     <!-- End AngularJS -->
 
     <!-- Start Bootstrap v4 -->
@@ -18,18 +21,24 @@
     <script src="/js/md5.min.js"></script>
 
     <script type="text/javascript">
-    var app = angular.module("app",["ngSanitize"]);
+    var app = angular.module("app",["ngSanitize","ngRoute"]);
+    app.config(["$routeProvider","$locationProvider",function($routeProvider,$locationProvider){
+        $routeProvider
+        .when("/:id",{
+            templateUrl: "templates/character.html",
+            controller: "CharacterPageCtrl"
+        })
+        .otherwise({
+            templateUrl: "templates/home.html",
+            controller: "HomePageCtrl"
+        });
 
-    app.controller("PageCtrl",["$scope","$http",function($scope,$http){
+        $locationProvider.html5Mode(true);
+    }]);
+
+    app.controller("PageCtrl",["$scope","$http","$location",function($scope,$http,$location){
         var baseUrl = "https://gateway.marvel.com/";
-        $scope.searchFor = "";
-        $scope.results = [];
-        $scope.search = function(args) {
-            $scope.sendProxyRequest("/v1/public/characters",{
-                "name":$scope.searchFor
-            });
-        };
-        $scope.sendProxyRequest = function(endpoint,data) {
+        $scope.sendProxyRequest = function(endpoint,data,callback) {
             //Trim '/'
             while(endpoint.startsWith("/")) {
                 endpoint = endpoint.slice(1);
@@ -42,19 +51,64 @@
                 "args":data
             })
             .then(function(response) {
-                if(response.data.data) {
+                if(callback) {
+                    console.log(response.data);
+                    callback(response.data);
+                }
+            });
+        };
+
+        $scope.loadChracterProfile = function(characterId) {
+            $location.path("/"+characterId);
+        }
+    }]);
+    app.controller("HomePageCtrl",["$rootScope","$scope",function($rootScope,$scope) {
+        $scope.searchFor = "";
+        $scope.results = [];
+        $scope.search = function(args) {
+            $scope.$parent.sendProxyRequest("/v1/public/characters",{
+                "nameStartsWith":$scope.searchFor
+            },function(response) {
+                if(response.data) {
                     if(!$scope.$$phase) {
                         $scope.$apply(function() {
-                            $scope.results = response.data.data.results;
+                            $scope.results = response.data.results;
                             console.log($scope.results);
                         });
                     } else {
-                        $scope.results = response.data.data.results;
+                        $scope.results = response.data.results;
                         console.log($scope.results);
                     }
-                }                
+                }
+            });
+        };
+
+        $scope.viewCharacter = function(characterId) {
+            $scope.$parent.loadChracterProfile(characterId);
+        }
+    }]);
+    app.controller("CharacterPageCtrl",["$rootScope","$scope","$routeParams",function($rootScope,$scope,$routeParams) {
+        console.log($routeParams);
+        $scope.Character = {};
+
+        var init = function(){
+            $scope.$parent.sendProxyRequest("/v1/public/characters/"+$routeParams.id,{},function(response) {
+                console.log(response.data);
+                if(response.data && response.data.count > 0) {
+                    if(!$scope.$$phase) {
+                        $scope.$apply(function() {
+                            $scope.Character = response.data.results[0];
+                            console.log($scope.results);
+                        });
+                    } else {
+                        $scope.Character = response.data.results[0];
+                        console.log($scope.results);
+                    }
+                }
             });
         }
+
+        init();
     }]);
     </script>
 
@@ -62,7 +116,7 @@
 </head>
 <body ng-controller="PageCtrl">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">Home</a>
+        <a class="navbar-brand" href="/">Home</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -79,29 +133,8 @@
         </div>
     </nav>
 
-    <div class="container-fluid">
-        <div class="row">
-            <form class="col-sm-12" action="javascript:void(0)">
-                <div class="form-group">
-                    <input type="text" class="form-control" placeholder="Search for Hero" ng-model="searchFor">
-                </div>
-                <button type="submit" class="btn btn-primary" ng-click="search(this)">Submit</button>
-            </form>
-        </div>
-        <div class="row">
-            <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12" ng-repeat="Character in results">
-                <div class="row lead-image">
-                    <div class="col-sm-12">
-                        <img ng-src="{{Character.thumbnail.path}}.{{Character.thumbnail.extension}}" class="img-thumbnail" />
-                    </div>
-                </div>
-                <div class="row character-name text-center">
-                    <div class="col-sm-12">
-                        <h2 ng-bind-html="Character.name"></h2>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="container-fluid" ng-view>
+
     </div>
 </body>
 </html>

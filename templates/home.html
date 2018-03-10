@@ -1,0 +1,26 @@
+<div class="row">
+    <form class="col-sm-12" action="javascript:void(0)">
+        <div class="form-group">
+            <input type="text" class="form-control" placeholder="Search for Hero" ng-model="searchFor">
+        </div>
+        <button type="submit" class="btn btn-primary" ng-click="search(this)">Submit</button>
+    </form>
+</div>
+<div class="row" >
+    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12" ng-repeat="Character in results">
+        <div class="row lead-image">
+            <div class="col-sm-12">
+                <a ng-href="/{{Character.id}}">
+                    <img ng-src="{{Character.thumbnail.path}}.{{Character.thumbnail.extension}}" class="img-thumbnail col-sm-12" />
+                </a>
+            </div>
+        </div>
+        <div class="row character-name text-center">
+            <div class="col-sm-12">
+                <a ng-href="/{{Character.id}}">
+                    <h2 ng-bind-html="Character.name"></h2>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
